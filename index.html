@@ -73,7 +73,7 @@
       return (
         <svg viewBox="0 0 68 28" width={40 * size} height={19 * size} className={moving ? "microscope-sperm swimming" : "microscope-sperm"} style={{overflow:'visible', display:'block', opacity: dead ? 0.88 : 0.78}}
           aria-label={dead ? 'Spermatozoïde coloré à l’éosine' : 'Spermatozoïde non coloré'}>
-          {selected && <ellipse cx="12" cy="14" rx="12" ry="10" fill="none" stroke="#fbbf24" strokeWidth="1.6" strokeDasharray="2 2" />}
+          {selected && <ellipse cx="12" cy="14" rx="13.5" ry="11.5" fill="rgba(255,128,0,0.16)" stroke="#ff8200" strokeWidth="3.2" />}
           <path d="M 20 14 Q 24 14 28 14" stroke="#94a3b8" strokeWidth="2.7" strokeLinecap="round" fill="none" />
           <g className={moving ? "flagellum-waving" : ""}>
           <path d={moving ? 'M 28 14 C 38 7 43 22 51 14 S 60 8 67 16' : 'M 28 14 C 39 9 45 20 54 13 Q 61 9 67 14'}
@@ -167,7 +167,7 @@
     }
 
     // --- MODULE 1 : CONCENTRATION ---
-    function ConcentrationModule({ onSuccess }) {
+    function ConcentrationModule({ onSuccess, examMode = false, locked = false }) {
       const [gridType, setGridType] = useState('MALASSEZ');
       const [dilution, setDilution] = useState(20);
       const [volumeEjaculate, setVolumeEjaculate] = useState(3.2);
@@ -180,6 +180,7 @@
       const [userTotal, setUserTotal] = useState('');
       const [userDiag, setUserDiag] = useState('');
       const [feedback, setFeedback] = useState(null);
+      const [awarded, setAwarded] = useState(false);
 
       const generateNewExercise = () => {
         const grids = ['MALASSEZ', 'THOMA', 'LEMAUR'];
@@ -212,6 +213,7 @@
         setUserTotal('');
         setUserDiag('');
         setFeedback(null);
+        setAwarded(false);
       };
 
       useEffect(() => { generateNewExercise(); }, []);
@@ -229,6 +231,7 @@
 
       const handleVerify = (e) => {
         e.preventDefault();
+        if (awarded || locked) return;
         const realCount = spermPositions.length;
         const unitVolMl = GRID_TYPES[gridType].unitVol * 1e-3;
         const totalVolMl = rectanglesCounted * unitVolMl;
@@ -250,14 +253,19 @@
 
         const isSuccess = isCountCorrect && isConcCorrect && isTotalCorrect && isDiagCorrect;
         setFeedback({ isSuccess, realCount, concMillions, totalMillions, diag });
-        if (isSuccess) onSuccess();
+        if (!awarded && !locked) {
+          const earned = [isCountCorrect, isConcCorrect, isTotalCorrect, isDiagCorrect].filter(Boolean).length;
+          onSuccess(earned);
+          setAwarded(true);
+        }
       };
 
       return (
         <div className="space-y-4 animate-fadeIn">
+          {examMode && <div className="bg-indigo-950/60 border border-indigo-500 rounded-lg p-3 text-sm">Mode examen : aucune correction ne sera affichée. {awarded ? "Réponses enregistrées." : "Réponds à toutes les questions puis valide une seule fois."}</div>}
           <div className="flex justify-between items-center bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
             <h2 className="text-base font-bold text-teal-300">1. Numération Visuelle (Hématimétrie)</h2>
-            <button onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">
+            <button disabled={examMode || locked} onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">
               🔄 Nouvelle lame
             </button>
           </div>
@@ -322,10 +330,10 @@
                     <option value="Azoospermie">Azoospermie</option>
                   </select>
                 </div>
-                <button type="submit" className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded text-xs shadow-lg">Vérifier mes calculs</button>
+                <button disabled={awarded || locked} type="submit" className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded text-xs shadow-lg">Vérifier mes calculs</button>
               </form>
 
-              {feedback && (
+              {feedback && !examMode && (
                 <div className={`p-3 rounded border text-xs space-y-1 font-mono ${feedback.isSuccess ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200' : 'bg-rose-950/60 border-rose-500 text-rose-200'}`}>
                   <div className="font-bold">{feedback.isSuccess ? '✓ Bravo ! Résultat exact.' : '✗ Inexactitude détectée.'}</div>
                   <div>• Réel compté : {feedback.realCount}</div>
@@ -341,7 +349,7 @@
     }
 
     // --- MODULE 2 : MOBILITÉ ---
-    function MobilityModule({ onSuccess }) {
+    function MobilityModule({ onSuccess, examMode = false, locked = false }) {
       const [spermList, setSpermList] = useState([]);
       const [isPlaying, setIsPlaying] = useState(true);
       const [userPrCount, setUserPrCount] = useState('');
@@ -350,17 +358,20 @@
       const [userPrPct, setUserPrPct] = useState('');
       const [userDiag, setUserDiag] = useState('');
       const [feedback, setFeedback] = useState(null);
+      const [awarded, setAwarded] = useState(false);
 
       const generateNewExercise = () => {
         const total = 20;
-        const pr = Math.floor(Math.random() * 11) + 2;
-        const np = Math.floor(Math.random() * 6) + 2;
+        const pr = Math.floor(Math.random() * 4) + 10; // 10 à 13 progressifs
+        const np = Math.floor(Math.random() * 3) + 3; // 3 à 5 mobiles sur place
         const im = total - pr - np;
 
         const list = [];
         for (let i = 0; i < pr; i++) {
-          const vx = (Math.random() - 0.5) * 2;
-          const vy = (Math.random() - 0.5) * 2;
+          const direction = Math.random() * Math.PI * 2;
+          const speed = 1.35 + Math.random() * 0.9;
+          const vx = Math.cos(direction) * speed;
+          const vy = Math.sin(direction) * speed;
           const angle = Math.atan2(vy, vx) * (180 / Math.PI) + 180;
           list.push({ id: i, type: 'PR', x: Math.random()*70+15, y: Math.random()*70+15, vx, vy, angle });
         }
@@ -370,6 +381,7 @@
         setSpermList(list.sort(() => Math.random() - 0.5));
         setIsPlaying(true);
         setUserPrCount(''); setUserNpCount(''); setUserImCount(''); setUserPrPct(''); setUserDiag(''); setFeedback(null);
+        setAwarded(false);
       };
 
       useEffect(() => { generateNewExercise(); }, []);
@@ -388,12 +400,13 @@
             }
             return s;
           }));
-        }, 80);
+        }, 65);
         return () => clearInterval(interval);
       }, [isPlaying]);
 
       const handleVerify = (e) => {
         e.preventDefault();
+        if (awarded || locked) return;
         const realPr = spermList.filter(s=>s.type==='PR').length;
         const realNp = spermList.filter(s=>s.type==='NP').length;
         const realIm = spermList.filter(s=>s.type==='IM').length;
@@ -407,14 +420,19 @@
                           userDiag.trim().toLowerCase() === expectedDiag.toLowerCase();
 
         setFeedback({ isSuccess, realPr, realNp, realIm, realPct, expectedDiag });
-        if (isSuccess) onSuccess();
+        if (!awarded && !locked) {
+          const earned = [parseInt(userPrCount,10) === realPr, parseInt(userNpCount,10) === realNp, parseInt(userImCount,10) === realIm, Math.abs(parseFloat(userPrPct.replace(',','.')) - realPct) < 0.5, userDiag.trim().toLowerCase() === expectedDiag.toLowerCase()].filter(Boolean).length;
+          onSuccess(earned);
+          setAwarded(true);
+        }
       };
 
       return (
         <div className="space-y-4 animate-fadeIn">
+          {examMode && <div className="bg-indigo-950/60 border border-indigo-500 rounded-lg p-3 text-sm">Mode examen : aucune correction ne sera affichée. {awarded ? "Réponses enregistrées." : "Réponds à toutes les questions puis valide une seule fois."}</div>}
           <div className="flex justify-between items-center bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
             <h2 className="text-base font-bold text-indigo-300">2. Cinétique de Mobilité (37°C)</h2>
-            <button onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Échantillon</button>
+            <button disabled={examMode || locked} onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Échantillon</button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -474,10 +492,10 @@
                   </select>
                 </div>
 
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider le décompte</button>
+                <button disabled={awarded || locked} type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider le décompte</button>
               </form>
 
-              {feedback && (
+              {feedback && !examMode && (
                 <div className={`p-3 rounded border text-xs space-y-1 font-mono ${feedback.isSuccess ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200' : 'bg-rose-950/60 border-rose-500 text-rose-200'}`}>
                   <div className="font-bold">{feedback.isSuccess ? '✓ Décompte parfait !' : '✗ Décompte inexact.'}</div>
                   <div>• Réel : PR={feedback.realPr}, NP={feedback.realNp}, IM={feedback.realIm}</div>
@@ -492,7 +510,7 @@
     }
 
     // --- MODULE 3 : VITALITÉ ---
-    function VitalityModule({ onSuccess }) {
+    function VitalityModule({ onSuccess, examMode = false, locked = false }) {
       const [spermCells, setSpermCells] = useState([]);
       const [clickCount, setClickCount] = useState({ pink: 0, white: 0 });
       const [userDeadCount, setUserDeadCount] = useState('');
@@ -500,6 +518,7 @@
       const [userVitalityPct, setUserVitalityPct] = useState('');
       const [userDiag, setUserDiag] = useState('');
       const [feedback, setFeedback] = useState(null);
+      const [awarded, setAwarded] = useState(false);
 
       const generateNewExercise = () => {
         const total = 20;
@@ -511,6 +530,7 @@
         setSpermCells(cells.sort(() => Math.random() - 0.5));
         setClickCount({ pink: 0, white: 0 });
         setUserDeadCount(''); setUserTotalCount(''); setUserVitalityPct(''); setUserDiag(''); setFeedback(null);
+        setAwarded(false);
       };
 
       useEffect(() => { generateNewExercise(); }, []);
@@ -531,6 +551,7 @@
 
       const handleVerify = (e) => {
         e.preventDefault();
+        if (awarded || locked) return;
         const realDead = spermCells.filter(c=>c.isDead).length;
         const realAlive = 20 - realDead;
         const realPct = parseFloat(((realAlive / 20) * 100).toFixed(1));
@@ -542,14 +563,19 @@
                           userDiag.trim().toLowerCase() === expectedDiag.toLowerCase();
 
         setFeedback({ isSuccess, realDead, realAlive, realPct, expectedDiag });
-        if (isSuccess) onSuccess();
+        if (!awarded && !locked) {
+          const earned = [parseInt(userDeadCount,10) === realDead, parseInt(userTotalCount,10) === 20, Math.abs(parseFloat(userVitalityPct.replace(',','.')) - realPct) < 0.5, userDiag.trim().toLowerCase() === expectedDiag.toLowerCase()].filter(Boolean).length;
+          onSuccess(earned);
+          setAwarded(true);
+        }
       };
 
       return (
         <div className="space-y-4 animate-fadeIn">
+          {examMode && <div className="bg-indigo-950/60 border border-indigo-500 rounded-lg p-3 text-sm">Mode examen : aucune correction ne sera affichée. {awarded ? "Réponses enregistrées." : "Réponds à toutes les questions puis valide une seule fois."}</div>}
           <div className="flex justify-between items-center bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
             <h2 className="text-base font-bold text-emerald-300">3. Test de Vitalité (Éosine Y)</h2>
-            <button onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Champ</button>
+            <button disabled={examMode || locked} onClick={generateNewExercise} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Champ</button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -602,10 +628,10 @@
                   </select>
                 </div>
 
-                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider la Vitalité</button>
+                <button disabled={awarded || locked} type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider la Vitalité</button>
               </form>
 
-              {feedback && (
+              {feedback && !examMode && (
                 <div className={`p-3 rounded border text-xs space-y-1 font-mono ${feedback.isSuccess ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200' : 'bg-rose-950/60 border-rose-500 text-rose-200'}`}>
                   <div className="font-bold">{feedback.isSuccess ? '✓ Test validé !' : '✗ Erreur de comptage.'}</div>
                   <div>• Morts réels : {feedback.realDead} | Vivants : {feedback.realAlive}</div>
@@ -684,7 +710,7 @@
       );
     }
 
-    function MorphologyModule({ onSuccess }) {
+    function MorphologyModule({ onSuccess, examMode = false, locked = false }) {
       const [frottis, setFrottis] = useState([]);
       const [selectedSpz, setSelectedSpz] = useState(null);
       const [userNormal, setUserNormal] = useState('');
@@ -694,6 +720,7 @@
       const [userIam, setUserIam] = useState('');
       const [userDiag, setUserDiag] = useState('');
       const [feedback, setFeedback] = useState(null);
+      const [awarded, setAwarded] = useState(false);
 
       const generateNewFrottis = () => {
         const list = [];
@@ -710,12 +737,14 @@
         setFrottis(list);
         setSelectedSpz(list[0]);
         setUserNormal(''); setUserHeadAnom(''); setUserMidAnom(''); setUserTailAnom(''); setUserIam(''); setUserDiag(''); setFeedback(null);
+        setAwarded(false);
       };
 
       useEffect(() => { generateNewFrottis(); }, []);
 
       const handleVerify = (e) => {
         e.preventDefault();
+        if (awarded || locked) return;
         const normalCount = frottis.filter(s => s.isNormal).length;
         const abnormalSpzCount = 10 - normalCount;
         let headAnomTotal = 0, midAnomTotal = 0, tailAnomTotal = 0;
@@ -740,14 +769,19 @@
                           userDiag.trim().toLowerCase() === expectedDiag.toLowerCase();
 
         setFeedback({ isSuccess, normalCount, headAnomTotal, midAnomTotal, tailAnomTotal, realIam, expectedDiag });
-        if (isSuccess) onSuccess();
+        if (!awarded && !locked) {
+          const earned = [parseInt(userNormal,10) === normalCount, parseInt(userHeadAnom,10) === headAnomTotal, parseInt(userMidAnom,10) === midAnomTotal, parseInt(userTailAnom,10) === tailAnomTotal, Math.abs(parseFloat(userIam.replace(',','.')) - realIam) < 0.1, userDiag.trim().toLowerCase() === expectedDiag.toLowerCase()].filter(Boolean).length;
+          onSuccess(earned);
+          setAwarded(true);
+        }
       };
 
       return (
         <div className="space-y-4 animate-fadeIn">
+          {examMode && <div className="bg-indigo-950/60 border border-indigo-500 rounded-lg p-3 text-sm">Mode examen : aucune correction ne sera affichée. {awarded ? "Réponses enregistrées." : "Réponds à toutes les questions puis valide une seule fois."}</div>}
           <div className="flex justify-between items-center bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
             <h2 className="text-base font-bold text-amber-300">4. Spermocytogramme & IAM</h2>
-            <button onClick={generateNewFrottis} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Frottis</button>
+            <button disabled={examMode || locked} onClick={generateNewFrottis} className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs">🔄 Frottis</button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -814,10 +848,10 @@
                   </select>
                 </div>
 
-                <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider le Spermocytogramme</button>
+                <button disabled={awarded || locked} type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs shadow-lg">Valider le Spermocytogramme</button>
               </form>
 
-              {feedback && (
+              {feedback && !examMode && (
                 <div className={`p-3 rounded border text-xs space-y-1 font-mono ${feedback.isSuccess ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200' : 'bg-rose-950/60 border-rose-500 text-rose-200'}`}>
                   <div className="font-bold">{feedback.isSuccess ? '✓ Spermocytogramme parfait !' : '✗ Analyse inexact.'}</div>
                   <div>• Typiques : {feedback.normalCount} / 10</div>
@@ -833,11 +867,80 @@
     }
 
     // --- APP ---
+    // Remplacer par l'URL /exec du déploiement Google Apps Script.
+    const GOOGLE_SHEETS_WEB_APP_URL = '';
+    const formatDuration = (seconds) => `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+
     function App() {
       const [activeTab, setActiveTab] = useState('dashboard');
       const [score, setScore] = useState(0);
-
-      const handleSuccess = () => setScore(s => s + 10);
+      const [examStep, setExamStep] = useState(0);
+      const [examResults, setExamResults] = useState({});
+      const [student, setStudent] = useState('');
+      const [group, setGroup] = useState('');
+      const [elapsedSeconds, setElapsedSeconds] = useState(0);
+      const [examEndedAt, setExamEndedAt] = useState(null);
+      const [examStartedAt, setExamStartedAt] = useState(null);
+      const [sendStatus, setSendStatus] = useState('');
+      const [sending, setSending] = useState(false);
+      const [examStarted, setExamStarted] = useState(false);
+      const steps = ['concentration', 'mobility', 'vitality', 'morphology'];
+      const labels = ['Concentration', 'Mobilité', 'Vitalité', 'Spermocytogramme'];
+      const maximum = [4,5,4,6];
+      const handleSuccess = (points) => setScore(s => s + points);
+      const recordExam = (points) => setExamResults(prev => ({...prev, [steps[examStep]]: points}));
+      const examTotal = Object.values(examResults).reduce((a,b)=>a+b,0);
+      const examFinished = steps.every(k => examResults[k] !== undefined);
+      useEffect(() => {
+        if (!examStarted || examEndedAt || !examStartedAt) return;
+        const update = () => setElapsedSeconds(Math.floor((Date.now() - examStartedAt) / 1000));
+        update();
+        const timer = setInterval(update, 1000);
+        return () => clearInterval(timer);
+      }, [examStarted, examStartedAt, examEndedAt]);
+      const finishExam = () => {
+        const end = Date.now();
+        setElapsedSeconds(Math.floor((end - examStartedAt) / 1000));
+        setExamEndedAt(end);
+        setExamStep(4);
+      };
+      const examReport = `Spermiolab — Examen\nÉlève : ${student}\nClasse : ${group}\nDate : ${new Date().toLocaleString('fr-FR')}\n${steps.map((k,i)=>`${labels[i]} : ${examResults[k] ?? 'Non fait'}/${maximum[i]}`).join('\n')}\nTotal : ${examTotal}/19\nNote : ${(examTotal*20/19).toFixed(2)}/20\nDurée : ${formatDuration(elapsedSeconds)}`;
+      const sendToSheets = async () => {
+        if (!examFinished || !examEndedAt || sending) return;
+        if (!GOOGLE_SHEETS_WEB_APP_URL) {
+          setSendStatus('Envoi indisponible : l’enseignant doit configurer le lien Google Apps Script.');
+          return;
+        }
+        setSending(true);
+        setSendStatus('Transmission en cours…');
+        const payload = {
+          submissionId: (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          student: student.trim(), group: group.trim(),
+          startedAt: new Date(examStartedAt).toISOString(),
+          endedAt: new Date(examEndedAt).toISOString(),
+          durationSeconds: elapsedSeconds,
+          concentration: examResults.concentration,
+          mobility: examResults.mobility,
+          vitality: examResults.vitality,
+          morphology: examResults.morphology,
+          total: examTotal,
+          grade20: Number((examTotal * 20 / 19).toFixed(2))
+        };
+        try {
+          // Apps Script ne permet pas de lire facilement sa réponse depuis GitHub Pages (CORS).
+          // no-cors peut lancer l'envoi, mais ne prouve PAS que Sheets l'a reçu.
+          await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+          setSendStatus('Envoi lancé. Demande à ton enseignant de vérifier la réception dans Google Sheets : elle ne peut pas être confirmée ici.');
+        } catch (error) {
+          setSendStatus('Échec de la transmission. Vérifie ta connexion et réessaie.');
+        } finally {
+          setSending(false);
+        }
+      };
 
       return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -852,7 +955,7 @@
 
               <div className="bg-slate-950 px-3 py-1 rounded-lg border border-slate-800 flex items-center space-x-1">
                 <span className="text-xs text-slate-400">Score:</span>
-                <span className="text-sm font-bold text-amber-300 font-mono">{score} pts</span>
+                <span className="text-sm font-bold text-amber-300 font-mono">{activeTab === 'exam' ? 'Examen' : score + ' pts'}</span>
               </div>
             </div>
 
@@ -869,6 +972,7 @@
               <button onClick={() => setActiveTab('vitality')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'vitality' ? 'bg-slate-800 text-emerald-300 border-t-2 border-emerald-400' : 'text-slate-400'}`}>
                 3. Vitalité
               </button>
+              <button onClick={() => setActiveTab('exam')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'exam' ? 'bg-slate-800 text-rose-300 border-t-2 border-rose-400' : 'text-slate-400'}`}>📝 Examen</button>
               <button onClick={() => setActiveTab('morphology')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'morphology' ? 'bg-slate-800 text-amber-300 border-t-2 border-amber-400' : 'text-slate-400'}`}>
                 4. Cytogramme
               </button>
@@ -877,6 +981,36 @@
 
           <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-6">
             {activeTab === 'dashboard' && <DashboardModule />}
+            {activeTab === 'exam' && <div className="space-y-4">
+              <h2 className="text-xl font-bold text-rose-300">Examen de spermiologie — 19 points</h2>
+              {!examStarted ? <div className="space-y-3 bg-slate-800 rounded-xl p-4">
+                <p>Quatre exercices, 19 réponses. Une seule validation par exercice. Aucune correction affichée.</p>
+                <label className="block text-sm">Nom et prénom de l'élève<input className="w-full bg-slate-950 border border-slate-600 rounded p-2 mt-1" value={student} onChange={e=>setStudent(e.target.value)} required /></label>
+                <label className="block text-sm">Classe / groupe<input className="w-full bg-slate-950 border border-slate-600 rounded p-2 mt-1" value={group} onChange={e=>setGroup(e.target.value)} /></label>
+                <button disabled={!student.trim()} className="bg-rose-600 disabled:opacity-50 rounded px-4 py-2 font-bold" onClick={()=>{setExamStarted(true);setExamStep(0);setExamResults({});setExamStartedAt(Date.now());setExamEndedAt(null);setElapsedSeconds(0);setSendStatus('');}}>Commencer l'examen</button>
+              </div> : <>
+                <p className="text-sm text-slate-300">{examEndedAt ? 'Examen terminé' : `Exercice ${examStep+1}/4 — ${labels[examStep]}`} • {Object.keys(examResults).length}/4 validés</p>
+                <div className="bg-slate-900 border border-rose-500/50 rounded-lg p-3 font-mono text-rose-200 text-lg">⏱ Chronomètre : {formatDuration(elapsedSeconds)} {examEndedAt ? '(arrêté)' : '(en cours)'}</div>
+                {!examEndedAt && <>
+                  {examStep === 0 && <ConcentrationModule key="exam-conc" examMode onSuccess={recordExam} />}
+                  {examStep === 1 && <MobilityModule key="exam-mob" examMode onSuccess={recordExam} />}
+                  {examStep === 2 && <VitalityModule key="exam-vit" examMode onSuccess={recordExam} />}
+                  {examStep === 3 && <MorphologyModule key="exam-morph" examMode onSuccess={recordExam} />}
+                  {examResults[steps[examStep]] !== undefined && <button className="w-full bg-indigo-600 rounded p-3 font-bold" onClick={()=>examStep===3 ? finishExam() : setExamStep(v=>v+1)}>{examStep===3 ? 'Terminer l’examen' : 'Passer à l’exercice suivant'}</button>}
+                </>}
+                {examEndedAt && examFinished && <div className="bg-slate-800 rounded-xl p-5 space-y-3">
+                  <h3 className="font-bold text-lg">Résultats enregistrés sur cet appareil</h3>
+                  <p className="text-2xl text-teal-300 font-bold">{examTotal}/19 — {(examTotal*20/19).toFixed(2)}/20</p>
+                  <p className="text-sm text-slate-300">Durée : {formatDuration(elapsedSeconds)}. Détail des points (sans correction) :</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">{steps.map((k,i)=><div key={k} className="bg-slate-900 rounded p-2">{labels[i]} : <strong>{examResults[k]}/{maximum[i]}</strong></div>)}</div>
+                  <p className="text-sm text-amber-300">L'envoi vers Google Sheets nécessite une configuration préalable par l'enseignant. La réception doit être vérifiée dans le tableau.</p>
+                  <button disabled={sending} onClick={sendToSheets} className="bg-teal-600 disabled:opacity-50 rounded px-4 py-2 font-bold">{sending ? 'Transmission…' : 'Envoyer mon résultat à l’enseignant'}</button>
+                  {sendStatus && <p role="status" className="text-sm text-amber-200">{sendStatus}</p>}
+                  <button onClick={()=>{const blob=new Blob([examReport],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='resultat-spermiolab.txt';a.click();URL.revokeObjectURL(a.href);}} className="ml-2 bg-slate-700 rounded px-4 py-2">Télécharger le résultat</button>
+                </div>}
+              </>}
+            </div>}
+
             {activeTab === 'concentration' && <ConcentrationModule onSuccess={handleSuccess} />}
             {activeTab === 'mobility' && <MobilityModule onSuccess={handleSuccess} />}
             {activeTab === 'vitality' && <VitalityModule onSuccess={handleSuccess} />}
