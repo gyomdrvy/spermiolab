@@ -27,6 +27,11 @@
     .animate-fadeIn {
       animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+    /* Oscillation douce du flagelle autour de sa base, sans déplacement de la tête. */
+    .flagellum-waving { transform-box: view-box; transform-origin: 28px 14px; animation: tail-wave .24s ease-in-out infinite alternate; }
+    @keyframes tail-wave { from { transform: skewY(-8deg) scaleY(.86); } to { transform: skewY(8deg) scaleY(1.13); } }
+    .microscope-sperm.swimming { filter: blur(.12px); }
+    @media (prefers-reduced-motion: reduce) { .flagellum-waving { animation: none; } }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased">
@@ -63,16 +68,18 @@
 
     // Dessin pédagogique semi-réaliste partagé par les trois microscopes.
     // Tête ovalaire avec acrosome, col, pièce intermédiaire et flagelle effilé.
-    function MicroscopeSperm({ variant = 'normal', moving = false, selected = false }) {
+    function MicroscopeSperm({ variant = 'normal', moving = false, selected = false, size = 1 }) {
       const dead = variant === 'dead';
       return (
-        <svg viewBox="0 0 68 28" width="48" height="24" style={{overflow:'visible', display:'block'}}
+        <svg viewBox="0 0 68 28" width={40 * size} height={19 * size} className={moving ? "microscope-sperm swimming" : "microscope-sperm"} style={{overflow:'visible', display:'block', opacity: dead ? 0.88 : 0.78}}
           aria-label={dead ? 'Spermatozoïde coloré à l’éosine' : 'Spermatozoïde non coloré'}>
           {selected && <ellipse cx="12" cy="14" rx="12" ry="10" fill="none" stroke="#fbbf24" strokeWidth="1.6" strokeDasharray="2 2" />}
           <path d="M 20 14 Q 24 14 28 14" stroke="#94a3b8" strokeWidth="2.7" strokeLinecap="round" fill="none" />
+          <g className={moving ? "flagellum-waving" : ""}>
           <path d={moving ? 'M 28 14 C 38 7 43 22 51 14 S 60 8 67 16' : 'M 28 14 C 39 9 45 20 54 13 Q 61 9 67 14'}
             stroke={dead ? '#d9a2aa' : '#b7c9d1'} strokeWidth="1.35" strokeLinecap="round" fill="none" />
           <path d="M 28 14 C 39 9 45 20 54 13 Q 61 9 67 14" stroke="#f8fafc" strokeWidth="0.35" opacity="0.45" fill="none" />
+          </g>
           <path d="M 2 14 C 2 8.5 6 5.5 11.5 5.5 C 17 5.5 21 9 21 14 C 21 19 17 22.5 11.5 22.5 C 6 22.5 2 19.5 2 14 Z"
             fill={dead ? '#e98b9f' : '#d4e3e9'} stroke={dead ? '#f9bdc9' : '#7c9cae'} strokeWidth="1.15" />
           <path d="M 2.8 14 C 2.8 9.2 6 6.6 10.7 6.3 Q 12.5 14 10.7 21.7 C 6 21.4 2.8 18.8 2.8 14 Z"
@@ -276,7 +283,7 @@
                       className="absolute cursor-pointer transform hover:scale-110 transition-all"
                       style={{ left: `${spz.x}%`, top: `${spz.y}%`, transform: `rotate(${spz.angle}deg)` }}
                     >
-                      <MicroscopeSperm selected={spz.clicked} />
+                      <MicroscopeSperm selected={spz.clicked} size={0.84} />
                     </div>
                   ))}
                 </div>
@@ -423,7 +430,7 @@
                 <div className="relative w-full h-full">
                   {spermList.map((spz) => (
                     <div key={spz.id} className="absolute transform" style={{ left: `${spz.x}%`, top: `${spz.y}%`, transform: `rotate(${spz.angle}deg)` }}>
-                      <MicroscopeSperm moving={spz.type === 'PR'} />
+                      <MicroscopeSperm moving={spz.type !== 'IM'} size={0.88} />
                     </div>
                   ))}
                 </div>
@@ -556,7 +563,7 @@
                 <div className="relative w-full h-full">
                   {spermCells.map((cell) => (
                     <div key={cell.id} onClick={() => handleCellClick(cell.id)} className="absolute cursor-pointer transform hover:scale-125 transition-transform" style={{ left: `${cell.x}%`, top: `${cell.y}%`, transform: `rotate(${cell.angle}deg)` }}>
-                      <MicroscopeSperm variant={cell.isDead ? 'dead' : 'normal'} selected={cell.tagged} />
+                      <MicroscopeSperm variant={cell.isDead ? 'dead' : 'normal'} selected={cell.tagged} size={0.9} />
                     </div>
                   ))}
                 </div>
