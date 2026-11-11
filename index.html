@@ -60,6 +60,30 @@
       );
     }
 
+
+    // Dessin pédagogique semi-réaliste partagé par les trois microscopes.
+    // Tête ovalaire avec acrosome, col, pièce intermédiaire et flagelle effilé.
+    function MicroscopeSperm({ variant = 'normal', moving = false, selected = false }) {
+      const dead = variant === 'dead';
+      return (
+        <svg viewBox="0 0 68 28" width="48" height="24" style={{overflow:'visible', display:'block'}}
+          aria-label={dead ? 'Spermatozoïde coloré à l’éosine' : 'Spermatozoïde non coloré'}>
+          {selected && <ellipse cx="12" cy="14" rx="12" ry="10" fill="none" stroke="#fbbf24" strokeWidth="1.6" strokeDasharray="2 2" />}
+          <path d="M 20 14 Q 24 14 28 14" stroke="#94a3b8" strokeWidth="2.7" strokeLinecap="round" fill="none" />
+          <path d={moving ? 'M 28 14 C 38 7 43 22 51 14 S 60 8 67 16' : 'M 28 14 C 39 9 45 20 54 13 Q 61 9 67 14'}
+            stroke={dead ? '#d9a2aa' : '#b7c9d1'} strokeWidth="1.35" strokeLinecap="round" fill="none" />
+          <path d="M 28 14 C 39 9 45 20 54 13 Q 61 9 67 14" stroke="#f8fafc" strokeWidth="0.35" opacity="0.45" fill="none" />
+          <path d="M 2 14 C 2 8.5 6 5.5 11.5 5.5 C 17 5.5 21 9 21 14 C 21 19 17 22.5 11.5 22.5 C 6 22.5 2 19.5 2 14 Z"
+            fill={dead ? '#e98b9f' : '#d4e3e9'} stroke={dead ? '#f9bdc9' : '#7c9cae'} strokeWidth="1.15" />
+          <path d="M 2.8 14 C 2.8 9.2 6 6.6 10.7 6.3 Q 12.5 14 10.7 21.7 C 6 21.4 2.8 18.8 2.8 14 Z"
+            fill={dead ? '#f3a5b3' : '#83b7c6'} opacity="0.95" />
+          <path d="M 10.8 6.2 Q 13.2 14 10.8 21.8" stroke={dead ? '#b94e6a' : '#608da2'} strokeWidth="0.85" fill="none" />
+          <ellipse cx="15.5" cy="14" rx="3.1" ry="5.7" fill={dead ? '#bd5670' : '#7896a7'} opacity="0.4" />
+          <path d="M 5 10 Q 7 8 9 8" stroke="#fff" strokeWidth="0.9" opacity="0.65" fill="none" />
+        </svg>
+      );
+    }
+
     // --- DASHBOARD ---
     function DashboardModule() {
       return (
@@ -249,13 +273,10 @@
                     <div 
                       key={spz.id} 
                       onClick={() => handleSpermClick(spz.id)}
-                      className="absolute cursor-pointer p-1.5 transform hover:scale-125 transition-all"
+                      className="absolute cursor-pointer transform hover:scale-110 transition-all"
                       style={{ left: `${spz.x}%`, top: `${spz.y}%`, transform: `rotate(${spz.angle}deg)` }}
                     >
-                      <div className="flex items-center">
-                        <div className={`w-2.5 h-1.5 rounded-full border ${spz.clicked ? 'bg-amber-400 border-amber-200 ring-2 ring-amber-400' : 'bg-teal-200 border-slate-300'}`}></div>
-                        <div className="w-3.5 h-[1px] bg-slate-400"></div>
-                      </div>
+                      <MicroscopeSperm selected={spz.clicked} />
                     </div>
                   ))}
                 </div>
@@ -402,10 +423,7 @@
                 <div className="relative w-full h-full">
                   {spermList.map((spz) => (
                     <div key={spz.id} className="absolute transform" style={{ left: `${spz.x}%`, top: `${spz.y}%`, transform: `rotate(${spz.angle}deg)` }}>
-                      <div className="flex items-center font-none">
-                        <div className="w-2.5 h-1.5 rounded-full bg-indigo-200 border border-slate-300"></div>
-                        <div className={`w-3.5 h-[1px] ${spz.type==='IM'?'bg-slate-500':'bg-indigo-300 animate-pulse'}`}></div>
-                      </div>
+                      <MicroscopeSperm moving={spz.type === 'PR'} />
                     </div>
                   ))}
                 </div>
@@ -538,10 +556,7 @@
                 <div className="relative w-full h-full">
                   {spermCells.map((cell) => (
                     <div key={cell.id} onClick={() => handleCellClick(cell.id)} className="absolute cursor-pointer transform hover:scale-125 transition-transform" style={{ left: `${cell.x}%`, top: `${cell.y}%`, transform: `rotate(${cell.angle}deg)` }}>
-                      <div className="flex items-center">
-                        <div className={`w-3 h-2 rounded-full border ${cell.isDead ? 'bg-rose-500 border-rose-300' : 'bg-slate-100 border-slate-300'} ${cell.tagged ? 'ring-2 ring-amber-400' : ''}`}></div>
-                        <div className="w-4 h-[1px] bg-slate-400"></div>
-                      </div>
+                      <MicroscopeSperm variant={cell.isDead ? 'dead' : 'normal'} selected={cell.tagged} />
                     </div>
                   ))}
                 </div>
