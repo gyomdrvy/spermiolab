@@ -585,7 +585,7 @@
                 <span className="text-slate-200">Blancs (Vivants) : {clickCount.white}</span>
               </div>
 
-              <div className="relative w-full aspect-square max-w-[340px] mx-auto bg-rose-950/20 rounded-full border-4 border-slate-700 overflow-hidden shadow-2xl flex items-center justify-center p-2 select-none">
+              <div className="relative w-full aspect-square max-w-[340px] mx-auto bg-slate-950 rounded-full border-4 border-slate-700 overflow-hidden shadow-2xl flex items-center justify-center p-2 select-none">
                 <div className="relative w-full h-full">
                   {spermCells.map((cell) => (
                     <div key={cell.id} onClick={() => handleCellClick(cell.id)} className="absolute cursor-pointer transform hover:scale-125 transition-transform" style={{ left: `${cell.x}%`, top: `${cell.y}%`, transform: `rotate(${cell.angle}deg)` }}>
@@ -972,10 +972,11 @@
               <button onClick={() => setActiveTab('vitality')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'vitality' ? 'bg-slate-800 text-emerald-300 border-t-2 border-emerald-400' : 'text-slate-400'}`}>
                 3. Vitalité
               </button>
-              <button onClick={() => setActiveTab('exam')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'exam' ? 'bg-slate-800 text-rose-300 border-t-2 border-rose-400' : 'text-slate-400'}`}>📝 Examen</button>
               <button onClick={() => setActiveTab('morphology')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'morphology' ? 'bg-slate-800 text-amber-300 border-t-2 border-amber-400' : 'text-slate-400'}`}>
                 4. Cytogramme
               </button>
+              <div className="flex-1 min-w-4" aria-hidden="true"></div>
+              <button onClick={() => setActiveTab('exam')} className={`px-3 py-2 rounded-t-lg font-semibold whitespace-nowrap ${activeTab === 'exam' ? 'bg-slate-800 text-rose-300 border-t-2 border-rose-400' : 'text-slate-400'}`}>📝 Examen</button>
             </div>
           </header>
 
